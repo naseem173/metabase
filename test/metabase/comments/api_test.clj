@@ -345,6 +345,32 @@
                                       :target_type "document"
                                       :target_id doc-id)))))))
 
+(deftest compound-emoji-reaction-test
+  (testing "POST /api/comment/:comment-id/reaction accepts multi-codepoint compound emoji"
+    (mt/with-temp [:model/Document {doc-id :id}     {}
+                   :model/Comment  {comment-id :id} {:target_id doc-id}]
+      (mt/with-model-cleanup [:model/CommentReaction]
+        ;; The England flag is a black-flag base emoji followed by six tag characters spelling "gbeng"
+        ;; and a cancel tag: 7 code points, 14 UTF-16 code units. It was previously rejected by the
+        ;; `emoji` schema's old 10-character limit.
+        (let [england-flag "🏴󠁧󠁢󠁥󠁮󠁧󠁿"]
+          (is (=? {:reacted true}
+                  (mt/user-http-request :rasta :post 200 (str "comment/" comment-id "/reaction")
+                                        {:emoji england-flag})))
+          (is (=? {:comments [{:id        comment-id
+                               :reactions [{:emoji england-flag
+                                            :count 1}]}]}
+                  (mt/user-http-request :rasta :get 200 "comment/"
+                                        :target_type "document"
+                                        :target_id doc-id))))))))
+
+(deftest reaction-emoji-too-long-test
+  (testing "POST /api/comment/:comment-id/reaction 400s on input longer than the emoji length limit"
+    (mt/with-temp [:model/Document {doc-id :id}     {}
+                   :model/Comment  {comment-id :id} {:target_id doc-id}]
+      (is (some? (mt/user-http-request :rasta :post 400 (str "comment/" comment-id "/reaction")
+                                       {:emoji (apply str (repeat 33 "a"))}))))))
+
 (deftest multiple-emoji-reactions-test
   ;; Relies on comment_reaction.emoji using an exact (not linguistic) collation on MySQL/MariaDB -- see
   ;; migration v63.2026-07-06T00:00:00. Under the table's original utf8mb4_unicode_ci collation, distinct
