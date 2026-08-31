@@ -314,7 +314,7 @@
   "Toggle a reaction on a comment"
   [{:keys [comment-id]} :- [:map [:comment-id ms/PositiveInt]]
    _query-params
-   {:keys [emoji]} :- [:map [:emoji [:string {:min 1 :max 10}]]]]
+   {:keys [emoji]} :- [:map [:emoji [:string {:min 1 :max 32}]]]]
   (let [comment (api/check-404 (t2/select-one :model/Comment :id comment-id))]
     (api/check-400 (not (:deleted_at comment))
                    "Cannot react to deleted comments")

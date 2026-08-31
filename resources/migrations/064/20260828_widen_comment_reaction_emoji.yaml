@@ -1,0 +1,30 @@
+## Widen comment_reaction.emoji from varchar(10) to varchar(32) so multi-codepoint compound emoji fit.
+##
+## Some valid single emoji are longer than 10 UTF-16 code units once you count every code point in the
+## sequence: flag "tag" sequences like the England flag (7 code points / 14 UTF-16 units) and ZWJ
+## sequences combining a base emoji, skin-tone modifiers, and joiners. The 10-character limit set when
+## this column was created (v57.2025-09-01T17:15:00) only fit simple single-code-point emoji, so the
+## API's matching [:string {:max 10}] schema in metabase.comments.api rejected these as 400s.
+
+databaseChangeLog:
+  - changeSet:
+      id: v64.2026-08-28T00:00:00
+      author: naseem173
+      comment: Widen comment_reaction.emoji from varchar(10) to varchar(32) to fit multi-codepoint compound emoji
+      changes:
+        - modifyDataType:
+            tableName: comment_reaction
+            columnName: emoji
+            newDataType: varchar(32)
+      rollback: []
+
+  - changeSet:
+      id: v64.2026-08-28T00:00:01
+      author: naseem173
+      comment: Preserve NOT NULL on comment_reaction.emoji after widening
+      changes:
+        - addNotNullConstraint:
+            tableName: comment_reaction
+            columnName: emoji
+            columnDataType: varchar(32)
+      rollback: []
